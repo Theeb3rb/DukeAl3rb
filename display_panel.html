@@ -1,92 +1,67 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>لوحة عرض الأسئلة</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Lalezar&display=swap');
-  body {
-    margin: 0;
-    padding: 0;
-    background-color: #ffffff;
-    color: #222222;
-    font-family: 'Lalezar', sans-serif, Arial, sans-serif;
-    font-size: 48px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    direction: rtl;
-    text-align: center;
-    user-select: none;
-  }
-  #question {
-    padding: 20px;
-    max-width: 90%;
-    word-wrap: break-word;
-  }
-  #timer {
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    font-size: 32px;
-    font-weight: bold;
-    color: #888888;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لوحة عرض السؤال</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #ffffff;
+      font-family: 'Lalezar', sans-serif;
+      color: #222;
+      text-align: center;
+      overflow: hidden;
+      transition: background-color 0.5s, color 0.5s;
+    }
+
+    #question {
+      font-size: 48px;
+      padding: 20px;
+      max-width: 90%;
+      word-wrap: break-word;
+    }
+
+    #timer {
+      font-size: 32px;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
+  <div>
+    <div id="question">في انتظار السؤال...</div>
+    <div id="timer">00</div>
+  </div>
 
-<div id="timer"></div>
-<div id="question">انتظر السؤال...</div>
+  <script>
+    const questionDiv = document.getElementById("question");
+    const timerDiv = document.getElementById("timer");
 
-<script>
-  // Default styles
-  let fontFamily = "'Lalezar', sans-serif";
-  let fontSize = 48;
-  let fontColor = "#222222";
-  let bgColor = "#ffffff";
+    window.addEventListener("message", (event) => {
+      const msg = event.data;
 
-  const questionDiv = document.getElementById('question');
-  const timerDiv = document.getElementById('timer');
-
-  function updateStyles() {
-    document.body.style.backgroundColor = bgColor;
-    questionDiv.style.color = fontColor;
-    questionDiv.style.fontFamily = fontFamily;
-    questionDiv.style.fontSize = fontSize + 'px';
-  }
-
-  // Handle messages from control panel
-  window.addEventListener('message', (event) => {
-    const data = event.data;
-    if (!data || !data.type) return;
-
-    if (data.type === 'showQuestion') {
-      questionDiv.textContent = data.text;
-      startTimer(data.timer);
-    } else if (data.type === 'timer') {
-      timerDiv.textContent = 'الوقت المتبقي: ' + data.timeLeft + ' ث';
-      if (data.timeLeft === 0) {
-        timerDiv.textContent = '';
+      if (msg.type === "showQuestion") {
+        questionDiv.textContent = msg.text;
+        timerDiv.textContent = msg.timer;
       }
-    } else if (data.type === 'updateStyles') {
-      fontFamily = data.fontFamily || fontFamily;
-      fontSize = data.fontSize || fontSize;
-      fontColor = data.fontColor || fontColor;
-      bgColor = data.bgColor || bgColor;
-      updateStyles();
-    }
-  });
 
-  function startTimer(seconds) {
-    timerDiv.textContent = 'الوقت المتبقي: ' + seconds + ' ث';
-  }
+      if (msg.type === "timer") {
+        timerDiv.textContent = msg.timeLeft;
+      }
 
-  // Initialize styles
-  updateStyles();
-</script>
-
+      if (msg.type === "updateStyles") {
+        document.body.style.fontFamily = msg.fontFamily;
+        document.body.style.backgroundColor = msg.bgColor;
+        document.body.style.color = msg.fontColor;
+        questionDiv.style.fontSize = msg.fontSize + "px";
+      }
+    });
+  </script>
 </body>
 </html>
