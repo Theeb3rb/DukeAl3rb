@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>لوحة عرض الأسئلة</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Lalezar&display=swap');
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+    color: #222222;
+    font-family: 'Lalezar', sans-serif, Arial, sans-serif;
+    font-size: 48px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    direction: rtl;
+    text-align: center;
+    user-select: none;
+  }
+  #question {
+    padding: 20px;
+    max-width: 90%;
+    word-wrap: break-word;
+  }
+  #timer {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    font-size: 32px;
+    font-weight: bold;
+    color: #888888;
+  }
+</style>
+</head>
+<body>
+
+<div id="timer"></div>
+<div id="question">انتظر السؤال...</div>
+
+<script>
+  // Default styles
+  let fontFamily = "'Lalezar', sans-serif";
+  let fontSize = 48;
+  let fontColor = "#222222";
+  let bgColor = "#ffffff";
+
+  const questionDiv = document.getElementById('question');
+  const timerDiv = document.getElementById('timer');
+
+  function updateStyles() {
+    document.body.style.backgroundColor = bgColor;
+    questionDiv.style.color = fontColor;
+    questionDiv.style.fontFamily = fontFamily;
+    questionDiv.style.fontSize = fontSize + 'px';
+  }
+
+  // Handle messages from control panel
+  window.addEventListener('message', (event) => {
+    const data = event.data;
+    if (!data || !data.type) return;
+
+    if (data.type === 'showQuestion') {
+      questionDiv.textContent = data.text;
+      startTimer(data.timer);
+    } else if (data.type === 'timer') {
+      timerDiv.textContent = 'الوقت المتبقي: ' + data.timeLeft + ' ث';
+      if (data.timeLeft === 0) {
+        timerDiv.textContent = '';
+      }
+    } else if (data.type === 'updateStyles') {
+      fontFamily = data.fontFamily || fontFamily;
+      fontSize = data.fontSize || fontSize;
+      fontColor = data.fontColor || fontColor;
+      bgColor = data.bgColor || bgColor;
+      updateStyles();
+    }
+  });
+
+  function startTimer(seconds) {
+    timerDiv.textContent = 'الوقت المتبقي: ' + seconds + ' ث';
+  }
+
+  // Initialize styles
+  updateStyles();
+</script>
+
+</body>
+</html>

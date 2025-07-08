@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>لوحة تحكم مولد الأسئلة</title>
+  <style>
+    body {
+      font-family: 'Lalezar', sans-serif, Arial;
+      background: #f9f9f9;
+      padding: 20px;
+      color: #222;
+      direction: rtl;
+    }
+    label {
+      display: block;
+      margin-top: 12px;
+    }
+    select, input[type="color"], input[type="number"], input[type="text"] {
+      margin-top: 4px;
+      padding: 6px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1.1em;
+      cursor: pointer;
+    }
+    .section {
+      background: white;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+      border-radius: 6px;
+      box-shadow: 0 0 8px #ddd;
+    }
+    .status {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<h1>لوحة تحكم مولد الأسئلة</h1>
+
+<div class="section">
+  <label for="fontSelect">اختر الخط:</label>
+  <select id="fontSelect">
+    <option value="'Lalezar', sans-serif">Lalezar (افتراضي)</option>
+    <option value="Arial, sans-serif">Arial</option>
+    <option value="'Tahoma', sans-serif">Tahoma</option>
+    <option value="'Courier New', monospace">Courier New</option>
+  </select>
+
+  <label for="fontSize">حجم الخط (بالبكسل):</label>
+  <input type="number" id="fontSize" value="48" min="10" max="120" />
+
+  <label for="fontColor">لون الخط:</label>
+  <input type="color" id="fontColor" value="#222222" />
+
+  <label for="bgColor">لون الخلفية:</label>
+  <input type="color" id="bgColor" value="#ffffff" />
+</div>
+
+<div class="section">
+  <button id="openDisplayBtn">افتح لوحة العرض</button>
+</div>
+
+<div class="section">
+  <button id="startCycle" disabled>ابدأ الدورة</button>
+  <button id="stopCycle" disabled>أوقف الدورة</button>
+</div>
+
+<div class="section">
+  <div class="status" id="status">الحالة: متوقف</div>
+</div>
+
+<script>
+let q1Questions = [];
+let q2Questions = [];
+let usedQ1Rows = new Set();
+let usedQ2Rows = new Set();
+
+let currentPhase = 0;
+let timer = null;
+let timeLeft = 0;
+let displayWindow = null;
+
+const fontSelect = document.getElementById('fontSelect');
+const fontSizeInput = document.getElementById('fontSize');
+const fontColorInput = document.getElementById('fontColor');
+const bgColorInput = document.getElementById('bgColor');
+
+const openDisplayBtn = document.getElementById('openDisplayBtn');
+const startBtn = document.getElementById('startCycle');
+const stopBtn = document.getElementById('stopCycle');
+const statusDiv = document.getElementById('status');
+
+const q1Url = "Q1.csv";
+const q2Url = "Q2.csv";
+
+openDisplayBtn.addEventListener('click', () => {
+  if (!displayWindow || displayWindow.closed) {
+    displayWindow = window.open('display_panel.html', 'display_panel', 'width=800,height=200');
+    if (displayWindow) {
+      startBtn.disabled = false;
+      statusDiv.textContent = 'الحالة: لوحة العرض مفتوحة وجاهزة';
+    } else {
+      alert('تعطيل نافذة منبثقة؟ الرجاء السماح للنوافذ المنبثقة لهذه الصفحة.');
+    }
+  } else {
+    displayWindow.focus();
+  }
+});
+
+async function loadLocalCSV(path) {
+  try {
+    const response = await fetch(path);
+    const text = await response.text();
+    const rows = text.trim().split("\n");
+    const questions = rows.map(line => line.split(",")[0]);
+    return questions;
+  } catch (e) {
+    alert("فشل في تحميل CSV: " + e.message);
+    throw e;
+  }
+}
+
+function pickRandomQuestion(questions, usedSet) {
+  if (usedSet.size >= questions.length) usedSet.clear();
+  let index;
+  do {
+    index = Math.floor(Math.random() * questions.length);
+  } while (usedSet.has(index));
+  usedSet.add(index);
+  return questions[index];
+}
+
+function sendToDisplay(message) {
+  if (displayWindow && !displayWindow.closed) {
+    displayWindow.postMessage(message, '*');
+  }
+}
+
+function updateDisplayStyles() {
+  sendToDisplay({
+    type: 'updateStyles',
+    fontFamily: fontSelect.value,
+    fontSize: fontSizeInput.value,
+    fontColor: fontColorInput.value,
+    bgColor: bgColorInput.value,
+  });
+}
+
+function startCycle() {
+  if (!q1Questions.length || !q2Questions.length) {
+    alert('لم يتم تحميل الأسئلة بعد');
+    return;
+  }
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+  statusDiv.textContent = 'الحالة: جاري العرض';
+  currentPhase = 0;
+  runPhase();
+}
+
+function stopCycle() {
+  if (timer) clearTimeout(timer);
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+  statusDiv.textContent = 'الحالة: متوقف';
+}
+
+function runPhase() {
+  let question = '';
+  let duration = 0;
+  switch (currentPhase) {
+    case 0:
+      question = pickRandomQuestion(q1Questions, usedQ1Rows);
+      duration = 5;
+      break;
+    case 1:
+    case 2:
+      question = pickRandomQuestion(q2Questions, usedQ2Rows);
+      duration = 10;
+      break;
+  }
+  sendToDisplay({ type: 'showQuestion', text: question, timer: duration });
+  timeLeft = duration;
+  timerTick();
+}
+
+function timerTick() {
+  if (timeLeft > 0) {
+    sendToDisplay({ type: 'timer', timeLeft });
+    timeLeft--;
+    timer = setTimeout(timerTick, 1000);
+  } else {
+    currentPhase = (currentPhase + 1) % 3;
+    runPhase();
+  }
+}
+
+startBtn.addEventListener('click', async () => {
+  try {
+    q1Questions = await loadLocalCSV(q1Url);
+    q2Questions = await loadLocalCSV(q2Url);
+    statusDiv.textContent = `تم تحميل الأسئلة: Q1=${q1Questions.length}, Q2/Q3=${q2Questions.length}`;
+    updateDisplayStyles();
+    startCycle();
+  } catch (e) {
+    statusDiv.textContent = 'فشل في تحميل الأسئلة.';
+  }
+});
+
+stopBtn.addEventListener('click', stopCycle);
+fontSelect.addEventListener('change', updateDisplayStyles);
+fontSizeInput.addEventListener('input', updateDisplayStyles);
+fontColorInput.addEventListener('input', updateDisplayStyles);
+bgColorInput.addEventListener('input', updateDisplayStyles);
+</script>
+</body>
+</html>
