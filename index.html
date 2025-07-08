@@ -70,7 +70,6 @@
 
 <div class="section">
   <button id="startCycle" disabled>ابدأ العرض</button>
-  <button id="stopCycle" disabled>أوقف العرض</button>
 </div>
 
 <div class="section">
@@ -91,7 +90,6 @@ const bgColorInput = document.getElementById('bgColor');
 
 const toggleDisplayBtn = document.getElementById('toggleDisplayBtn');
 const startBtn = document.getElementById('startCycle');
-const stopBtn = document.getElementById('stopCycle');
 const statusDiv = document.getElementById('status');
 
 const q1Url = "Q1.csv";
@@ -109,7 +107,6 @@ toggleDisplayBtn.addEventListener('click', () => {
     displayWindow.close();
     displayWindow = null;
     startBtn.disabled = true;
-    stopCycle();
     statusDiv.textContent = 'الحالة: لوحة العرض مغلقة';
   }
 });
@@ -158,23 +155,16 @@ function startCycle() {
     alert('لم يتم تحميل الأسئلة بعد');
     return;
   }
+
   startBtn.disabled = true;
-  stopBtn.disabled = false;
-  statusDiv.textContent = 'الحالة: جاري العرض';
-  runCycle();
-}
+  statusDiv.textContent = 'الحالة: جاري عرض سؤال واحد';
 
-function stopCycle() {
-  if (timer) clearTimeout(timer);
-  startBtn.disabled = false;
-  stopBtn.disabled = true;
-  statusDiv.textContent = 'الحالة: متوقف';
-}
-
-function runCycle() {
   const question = pickRandomQuestion(q1Questions, usedQ1Rows);
   const duration = 15;
+
   sendToDisplay({ type: 'showQuestion', text: question, timer: duration });
+  updateDisplayStyles();
+
   timeLeft = duration;
   timerTick();
 }
@@ -185,7 +175,12 @@ function timerTick() {
     timeLeft--;
     timer = setTimeout(timerTick, 1000);
   } else {
-    runCycle(); // Repeat every 15 seconds
+    if (displayWindow && !displayWindow.closed) {
+      displayWindow.close();
+      displayWindow = null;
+    }
+    startBtn.disabled = false;
+    statusDiv.textContent = 'الحالة: انتهى العرض وتم إغلاق اللوحة.';
   }
 }
 
@@ -200,7 +195,6 @@ startBtn.addEventListener('click', async () => {
   }
 });
 
-stopBtn.addEventListener('click', stopCycle);
 fontSelect.addEventListener('change', updateDisplayStyles);
 fontSizeInput.addEventListener('input', updateDisplayStyles);
 fontColorInput.addEventListener('input', updateDisplayStyles);
